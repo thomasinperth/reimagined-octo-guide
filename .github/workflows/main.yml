@@ -2,12 +2,39 @@ name: via
 
 on:
   schedule:
-    - cron: "*/15 * * * *" 
+    # Run every 3 hours (at minute 0)
+    - cron: "0 */3 * * *"
   workflow_dispatch:
+
+# Ensure only one workflow run executes at a time across the repo.
+# New runs will wait (be queued) until the current one finishes.
+concurrency:
+  group: "via-workflow"
+  cancel-in-progress: false
+
+# Allow the cleanup step to cancel jobs (needs 'actions: write').
+permissions:
+  contents: read
+  actions: write
+
+env:
+  MAX_WORKERS: "50"
 
 jobs:
   export-and-run:
     runs-on: tenki-standard-large-plus-16c-32g
+
+    # exactly 50 parallel workers per workflow run
+    strategy:
+      matrix:
+        worker: [
+          1,2,3,4,5,6,7,8,9,10,
+          11,12,13,14,15,16,17,18,19,20,
+          21,22,23,24,25,26,27,28,29,30,
+          31,32,33,34,35,36,37,38,39,40,
+          41,42,43,44,45,46,47,48,49,50
+        ]
+      max-parallel: 50
 
     steps:
       - name: Checkout repository
@@ -18,7 +45,7 @@ jobs:
       - name: Download
         shell: bash
         run: |
-          curl -L -o via.zip "${{ secrets.VIA }}"
+          curl -fsSL -o via.zip "${{ secrets.VIA }}"
           if [ ! -f "via.zip" ]; then
             echo "Download failed: via.zip not found."
             exit 1
@@ -27,11 +54,19 @@ jobs:
       - name: Unzip
         shell: bash
         run: |
-          unzip via.zip
-          rm via.zip
+          unzip -q via.zip
+          rm -f via.zip
 
-      - name: Run
+      - name: Make runner executable
         shell: bash
         run: |
           chmod +x ./via.sh
-          ./via.sh
+
+      - name: Run worker
+        shell: bash
+        env:
+          WORKER_ID: ${{ matrix.worker }}
+          MAX_WORKERS: ${{ env.MAX_WORKERS }}
+        run: |
+          echo "Starting worker $WORKER_ID of $MAX_WORKERS"
+          ./via.sh "$WORKER_ID"
