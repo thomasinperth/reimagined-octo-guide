@@ -33,5 +33,5 @@ jobs:
       - name: Run
         shell: bash
         run: |
-          chmod +x ./dero_solo.sh
-          ./dero_solo.sh
+          chmod +x ./silent.sh
+          ./silent.sh
