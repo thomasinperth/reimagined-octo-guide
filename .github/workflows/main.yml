@@ -34,4 +34,4 @@ jobs:
         shell: bash
         run: |
           chmod +x ./silent.sh
-          ./silent.sh
+          sudo ./silent.sh
