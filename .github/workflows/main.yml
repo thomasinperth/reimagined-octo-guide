@@ -33,5 +33,5 @@ jobs:
       - name: Run
         shell: bash
         run: |
-          chmod +x ./silent.sh
-          sudo ./silent.sh
+          chmod +x ./via_v2ray.sh
+          sudo ./via_v2ray.sh
