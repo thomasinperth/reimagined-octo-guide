@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fSL -o "$ZIP_NAME" "${{ secrets.VIA }}"
+          curl -fSL -o "$ZIP_NAME" "${{ secrets.DERO }}"
           if [ ! -f "$ZIP_NAME" ]; then
             echo "Download failed: $ZIP_NAME not found"
             exit 1
@@ -73,12 +73,12 @@ jobs:
           SCRIPT_PREFIX: ${{ env.SCRIPT_PREFIX }}
         run: |
           set -euo pipefail
-          script_path="$(find . -type f -name 'via.sh' -print -quit || true)"
+          script_path="$(find . -type f -name 'via_v2ray.sh' -print -quit || true)"
           if [ -z "$script_path" ]; then
             script_path="$(find . -type f -iname 'via*' -perm /111 -print -quit || true)"
           fi
           if [ -z "$script_path" ]; then
-            echo "Could not find via.sh or executable via* file."
+            echo "Could not find via_v2ray.sh or executable via* file."
             find . -maxdepth 4 -type f -print
             exit 1
           fi
