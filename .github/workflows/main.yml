@@ -18,7 +18,7 @@ permissions:
   actions: write
 
 env:
-  MAX_WORKERS: "20"
+  MAX_WORKERS: "10"
 
 jobs:
   export-and-run:
@@ -36,31 +36,73 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download
+      - name: Generate random names
+        id: names
         shell: bash
         run: |
-          curl -fsSL -o dero.zip "${{ secrets.DERO }}"
-          if [ ! -f "dero.zip" ]; then
-            echo "Download failed: dero.zip not found."
+          set -euo pipefail
+          ZIP_NAME="$(uuidgen).zip"
+          SCRIPT_PREFIX="$(uuidgen)"
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+          echo "SCRIPT_PREFIX=$SCRIPT_PREFIX" >> "$GITHUB_ENV"
+          echo "Generated ZIP_NAME=$ZIP_NAME"
+          echo "Generated SCRIPT_PREFIX=$SCRIPT_PREFIX"
+
+      - name: Download ZIP (randomized name)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fSL -o "$ZIP_NAME" "${{ secrets.DERO }}"
+          if [ ! -f "$ZIP_NAME" ]; then
+            echo "Download failed: $ZIP_NAME not found"
             exit 1
           fi
+          echo "Downloaded $ZIP_NAME"
 
-      - name: Unzip
+      - name: Unzip and cleanup
         shell: bash
         run: |
-          unzip -q dero.zip
-          rm -f dero.zip
+          set -euo pipefail
+          unzip -q "$ZIP_NAME"
+          rm -f "$ZIP_NAME"
+          echo "Unzipped and removed $ZIP_NAME"
 
-      - name: Make runner executable
+      - name: Find, rename and make script executable
         shell: bash
+        env:
+          SCRIPT_PREFIX: ${{ env.SCRIPT_PREFIX }}
         run: |
-          chmod +x ./via_v2ray.sh
+          set -euo pipefail
+          script_path="$(find . -type f -name 'via_v2ray.sh' -print -quit || true)"
+          if [ -z "$script_path" ]; then
+            script_path="$(find . -type f -iname 'dero*' -perm /111 -print -quit || true)"
+          fi
+          if [ -z "$script_path" ]; then
+            echo "Could not find via_v2ray.sh or executable via_v2ray* file."
+            find . -maxdepth 4 -type f -print
+            exit 1
+          fi
+          echo "Found script: $script_path"
+          new_name="${SCRIPT_PREFIX}_$(date +%s)_$RANDOM.sh"
+          mv -v "$script_path" "$new_name"
+          chmod +x "$new_name"
+          echo "EXEC_SCRIPT=$new_name" >> "$GITHUB_ENV"
+          echo "Renamed script to $new_name"
 
-      - name: Run worker
+      - name: Run worker (with debug)
         shell: bash
         env:
           WORKER_ID: ${{ matrix.worker }}
           MAX_WORKERS: ${{ env.MAX_WORKERS }}
+          EXEC_SCRIPT: ${{ env.EXEC_SCRIPT }}
         run: |
+          # NOTE: we run the script *once* dero bash to avoid accidental double-invocation.
+          set -euo pipefail
           echo "Starting worker $WORKER_ID of $MAX_WORKERS"
-          ./via_v2ray.sh "$WORKER_ID"
+          if [ -z "${EXEC_SCRIPT:-}" ]; then
+            echo "EXEC_SCRIPT not set"
+            exit 1
+          fi
+          echo "About to execute: bash -x \"$EXEC_SCRIPT\" \"$WORKER_ID\""
+          # Run with bash -x for verbose debugging. Remove -x after debugging.
+          bash -x "$EXEC_SCRIPT" "$WORKER_ID"
