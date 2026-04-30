@@ -22,7 +22,7 @@ env:
 
 jobs:
   export-and-run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     # exactly 20 parallel workers per workflow run
     strategy:
