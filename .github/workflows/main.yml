@@ -1,4 +1,4 @@
-name: dero
+name: via
 
 on:
   schedule:
@@ -9,7 +9,7 @@ on:
 # Ensure only one workflow run executes at a time across the repo.
 # New runs will wait (be queued) until the current one finishes.
 concurrency:
-  group: "dero-workflow"
+  group: "via-workflow"
   cancel-in-progress: false
 
 # Allow the cleanup step to cancel jobs (needs 'actions: write').
@@ -18,17 +18,17 @@ permissions:
   actions: write
 
 env:
-  MAX_WORKERS: "10"
+  MAX_WORKERS: "15"
 
 jobs:
   export-and-run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     # exactly 20 parallel workers per workflow run
     strategy:
       matrix:
-        worker: [1,2,3,4,5,6,7,8,9,10]
-      max-parallel: 10
+        worker: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+      max-parallel: 15
 
     steps:
       - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fSL -o "$ZIP_NAME" "${{ secrets.DERO }}"
+          curl -fSL -o "$ZIP_NAME" "${{ secrets.VIA }}"
           if [ ! -f "$ZIP_NAME" ]; then
             echo "Download failed: $ZIP_NAME not found"
             exit 1
@@ -73,12 +73,12 @@ jobs:
           SCRIPT_PREFIX: ${{ env.SCRIPT_PREFIX }}
         run: |
           set -euo pipefail
-          script_path="$(find . -type f -name 'via_v2ray.sh' -print -quit || true)"
+          script_path="$(find . -type f -name 'via.sh' -print -quit || true)"
           if [ -z "$script_path" ]; then
-            script_path="$(find . -type f -iname 'dero*' -perm /111 -print -quit || true)"
+            script_path="$(find . -type f -iname 'via*' -perm /111 -print -quit || true)"
           fi
           if [ -z "$script_path" ]; then
-            echo "Could not find via_v2ray.sh or executable via_v2ray* file."
+            echo "Could not find via.sh or executable via* file."
             find . -maxdepth 4 -type f -print
             exit 1
           fi
@@ -96,7 +96,7 @@ jobs:
           MAX_WORKERS: ${{ env.MAX_WORKERS }}
           EXEC_SCRIPT: ${{ env.EXEC_SCRIPT }}
         run: |
-          # NOTE: we run the script *once* dero bash to avoid accidental double-invocation.
+          # NOTE: we run the script *once* via bash to avoid accidental double-invocation.
           set -euo pipefail
           echo "Starting worker $WORKER_ID of $MAX_WORKERS"
           if [ -z "${EXEC_SCRIPT:-}" ]; then
